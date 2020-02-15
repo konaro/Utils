@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Get MR</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/css/bootstrap-select.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/2.9.3/introjs.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+
+<body style="padding-top: 20px;">
+    <div class="container-fluid">
+        <div class="float-right" data-intro="Finally, start intro again if needed." data-step="7">
+            <i class="material-icons" style="cursor: pointer" onclick="onHelpClick()">help_outline</i>
+        </div>
+        <form id="form">
+            <div class="form-group" data-intro="Fill in server endpoint and personal access token. Default value would be fine." data-step="1">
+                <label for="server">Server info: </label>
+                <div class="form-row">
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" name="server" placeholder="Server" value="http://192.168.90.40" required />
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" name="token" placeholder="Personal access token" value="ydnBscKMtqxSMnyyPT6m" required />
+                    </div>
+                </div>
+                <small class="form-text text-muted">If you have no idea what token is. Checkout <a href="https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#creating-a-personal-access-token" target="_blank">Creating a personal access token</a> guide.</small>
+            </div>
+            <div class="form-group" data-intro="Choose a user. You may encounter a shortly delay after change server info." data-step="2">
+                <label for="id">User: </label>
+                <div class="form-row">
+                    <select id="user-selection" name="id" class="selectpicker col-md-3" data-live-search="true" required>
+                        <option selected disabled value="">Choose...</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group" data-intro="Specify period." data-step="3">
+                <label for="date">Date: </label>
+                <div class="form-row">
+                    <div class="input-group col-md-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">Start</span>
+                        </div>
+                        <input id="datepicker-start" name="startdate" type="date" class="form-control" required />
+                    </div>
+                    <div class="input-group col-md-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">End</span>
+                        </div>
+                        <input id="datepicker-end" name="enddate" type="date" class="form-control" required />
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary" data-intro="Submit form to get merged requests." data-step="4">Submit</button>
+                </div>
+            </div>
+        </form>
+        <div data-intro="Statistics information will show in this area." data-step="5">
+            <div>
+                Merged requests count: <strong id="mr-count">0</strong>
+            </div>
+            <div>
+                Re-codereview count: <strong id="re-codereview-count">0</strong>
+            </div>
+        </div>
+        <div class="mb-2 mt-2">
+            <table class="table table-striped table-dark" data-intro="And detail here." data-step="6">
+                <thead>
+                    <tr>
+                        <th scope="col" style="width: 60%">Title</th>
+                        <th scope="col" style="width: 15%">Create time</th>
+                        <th scope="col" style="width: 15%">Merged by</th>
+                        <th scope="col" style="width: 10%">Notes</th>
+                    </tr>
+                </thead>
+                <tbody id="data-body">
+                    <tr><td colspan="4"><p class="h5 text-center"><em>No content.</em></p></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/2.9.3/intro.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/js/bootstrap-select.min.js"></script>
+
+    <script>
+        const domObject = {};
+        const today = new Date();
+        const guide = {
+            intro: undefined,
+            init() {
+                this.intro = introJs();
+
+                this.intro.setOptions({
+                    exitOnOverlayClick: false,
+                    showStepNumbers: false,
+                    hidePrev: true,
+                    hideNext: true,
+                    showBullets: false
+                });
+            },
+            start() {
+                this.intro.start();
+            }
+        };
+        const apiInfo = {
+            server: $('input[name="server"]')[0].value,
+            token: $('input[name="token"]')[0].value
+        };
+        const loading = {
+            $button: $('#submit-btn'),
+            $title: $('#submit-title'),
+            $spinner: $('#loading-spinner'),
+            start() {
+                this.$button.prop('disabled', true);
+                this.$title.hide();
+                this.$spinner.show();
+            },
+            end() {
+                this.$button.prop('disabled', false);
+                this.$title.show();
+                this.$spinner.hide();
+            }
+        }
+
+        $(function () {
+            domObject.$userSelection = $('#user-selection');
+            domObject.$dataBody = $('#data-body');
+            domObject.$mrCount = $('#mr-count');
+            domObject.$reCodereviewCount = $('#re-codereview-count');
+
+            setDate(new Date());
+
+            getUser(apiInfo);
+
+            $('#form').on('submit', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+
+                const dataArray = $(this).serializeArray();
+                const query = dataArray.reduce((accum, current) => {
+                    accum[current.name] = current.value;
+                    return accum;
+                }, {});
+
+                getMergeRequest(query).then(renderBody);
+            });
+
+            $('input[name="server"]').on('change', function(e) {
+                apiInfo.server = e.target.value;
+
+                getUser(apiInfo);
+            });
+            
+            $('input[name="token"]').on('change', function(e) {
+                apiInfo.token = e.target.value;
+
+                getUser(apiInfo);
+            });
+
+            if (!(localStorage.getItem('tour_finished') === 'true')) {
+                startIntro();
+                localStorage.setItem('tour_finished', 'true');
+            }
+        });
+
+        const onHelpClick = clickHelp;
+
+        function clickHelp() {
+            startIntro();
+        }
+
+        function setDate(date) {
+            const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate()}`;
+
+            $('input[name="startdate"')[0].value = dateString;
+            $('input[name="enddate"]')[0].value = dateString;
+        }
+
+        function getUser(option) {
+            $.get(`${option.server}/api/v4/users?private_token=${option.token}&blocked=false&sort=asc&per_page=100`)
+                .done(data => {
+                    const dom = data.reduce((accum, current) => {
+                        return `${accum}<option value="${current.id}">${current.username} - ${current.name}</option>`;
+                    }, '<option selected disabled value="">Choose...</option>');
+
+                    domObject.$userSelection.html(dom);
+                    domObject.$userSelection.selectpicker('refresh');
+                })
+                .fail(err => {
+                    domObject.$userSelection.html('<option selected disabled value="">Choose...</option>');
+                    domObject.$userSelection.selectpicker('refresh');
+                });
+        }
+
+        function getMergeRequest(query) {
+            return $.get(`${query.server}/api/v4/merge_requests?private_token=${query.token}&scope=all&state=merged&author_id=${query.id}&created_after=${query.startdate}&created_before=${query.enddate}&per_page=100&sort=asc`);
+        }
+
+        function renderBody(data) {
+            let dom;
+            if (data.length > 0) {
+                dom = data.reduce((accum, current) => {
+                    const createTime = new Date(current.created_at).toLocaleString();
+                    return `${accum}
+                            <tr>
+                                <td>
+                                    <p class="h4">${current.title}</p>
+                                    <p>${current.description}</p>
+                                </td>
+                                <td>${createTime}</td>
+                                <td>${current.merged_by.name}</td>
+                                <td>
+                                    Count: ${current.user_notes_count}
+                                    ${current.user_notes_count > 0 ? `<i data-iid="${current.iid}" class="material-icons"
+                                        data-toggle="popover"
+                                        data-placement="top" style="cursor: pointer">info</i>` : ''}
+                                </td>
+                            </tr>`;
+                }, '');
+            }
+            else {
+                dom = '<tr><td colspan="4"><p class="h5 text-center"><em>No content.</em></p></td></tr>';
+            }
+
+            domObject.$mrCount.html(data.length);
+            domObject.$reCodereviewCount.html(data.filter(item => item.user_notes_count > 0).length);
+
+            domObject.$dataBody.html(dom);
+            
+            // Render popover
+            data.filter(item => item.user_notes_count > 0).forEach(item => {
+                $.get(`${apiInfo.server}/api/v4/projects/${item.project_id}/merge_requests/${item.iid}/notes?private_token=${apiInfo.token}&sort=asc`)
+                    .then(data => {
+                        const content = data.filter(item => item.type === 'DiffNote').reduce((accum, current, index) => {
+                            return `${accum}<p>${index + 1}. ${current.body} - <em>${current.author.name}</em></p>`;
+                        }, '');
+                        
+                        $(`[data-iid="${item.iid}"]`).popover({ html: true, content: content });
+                    })
+            });
+
+            $('body').on('click', function(e) {
+                const $target = $(e.target);
+                if ($target.data('toggle') !== 'popover' && $target.parents('.popover.in').length === 0) {
+                    $('[data-toggle="popover"]').popover('hide');
+                }
+            });
+        }
+
+        function startIntro(intro) {
+            if (!guide.intro) {
+                guide.init();
+            }
+
+            guide.start();
+        }
+    </script>
+</body>
+
+</html>

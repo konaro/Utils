@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<script src="https://code.jquery.com/jquery-3.1.0.js"></script>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Random sort</title>
+</head>
+
+<body>
+  <button onmousedown="start()" onmouseup="stop()" onmouseleave="stop()">Generate</button>
+  <table>
+    <thead>
+      <th>順序</th>
+      <th>名稱</th>
+    </thead>
+    <tbody id="result-body">
+    </tbody>
+  </table>
+</body>
+<script>
+const members = [
+  '黃英銘',
+  '陳怡安',
+  '黃妙如',
+  '陳思穎',
+  '郭亞蓁',
+  '周珈卉',
+  '張仕新',
+  '蔡安琪',
+  '李日暉',
+  '白哲安',
+  '杜易勳',
+  '潘汶甫',
+  '鐘浩哲',
+  '黃尚煒',
+  '莊繼翔',
+  '何偉豪',
+  '何秉儒',
+  '黃詩雯',
+  '蘇育民',
+  '謝旻憲',
+  '金柏谷'
+];
+
+let interval;
+
+function start() {
+  clearInterval(interval);
+  interval = setInterval(generate, 50);
+}
+
+function stop() {
+  clearInterval(interval);
+}
+
+function generate() {
+  const origin = [...members];
+  const random = [];
+
+  while (origin.length > 0) {
+    const index = getRandom(origin.length);
+
+    random.push(origin[index]);
+    origin.splice(index, 1);
+  }
+
+  renderResult(random);
+}
+
+function getRandom(length) {
+  return Math.floor(Math.random() * length);
+}
+
+function renderResult(result) {
+  const data = result.reduce((accum, current, index) => `${accum}<tr><td>${index + 1}</td><td>${current}</td></tr>`, '');
+  const body = document.getElementById('result-body');
+
+  body.innerHTML = data;
+}
+</script>
+
+</html>
